@@ -2,13 +2,108 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Kule Savunma Oyunu</title>
+  <title>Clash Royale Tarzı Oyun</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; color: white; font-family: sans-serif; }
+    #arena {
+      position: relative;
+      width: 100vw;
+      height: 90vh;
+      background: #333;
+      border: 5px solid #555;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .lane {
+      height: 33.3%;
+      border-top: 1px solid #666;
+      border-bottom: 1px solid #666;
+      position: relative;
+    }
+    .unit {
+      width: 30px;
+      height: 30px;
+      background: red;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 10px;
+      transition: left 0.1s linear;
+    }
+    .tower {
+      width: 40px;
+      height: 60px;
+      background: gold;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .enemy-tower { left: 10px; }
+    .player-tower { right: 10px; }
+  </style>
 </head>
 <body>
-  <h1>Kule Savunma Oyunu</h1>
-  <p>Oyuncular bağlandı mı diye kontrol ediliyor...</p>
+  <h2 style="text-align:center">Clash Royale Tarzı Kule Oyunu</h2>
+  <div id="arena">
+    <div class="lane" id="lane1"></div>
+    <div class="lane" id="lane2"></div>
+    <div class="lane" id="lane3"></div>
+  </div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="main.js"></script>
+  <script>
+    const socket = io("https://kule-savunma-parasor.onrender.com");
+
+    const lanes = ["lane1", "lane2", "lane3"];
+
+    lanes.forEach(laneId => {
+      const lane = document.getElementById(laneId);
+
+      // Kuleleri çiz
+      const enemyTower = document.createElement("div");
+      enemyTower.className = "tower enemy-tower";
+      lane.appendChild(enemyTower);
+
+      const playerTower = document.createElement("div");
+      playerTower.className = "tower player-tower";
+      lane.appendChild(playerTower);
+
+      // Oyuncu lane'e tıklarsa birim oluştur
+      lane.addEventListener("click", (e) => {
+        const unit = document.createElement("div");
+        unit.className = "unit";
+        unit.style.left = "90%";
+        lane.appendChild(unit);
+
+        const laneIndex = lanes.indexOf(laneId);
+        socket.emit("move", { lane: laneIndex });
+
+        let pos = 90;
+        const moveInterval = setInterval(() => {
+          pos -= 1;
+          unit.style.left = pos + "%";
+          if (pos <= 10) clearInterval(moveInterval);
+        }, 100);
+      });
+    });
+
+    // Başka oyuncudan birim geldiyse
+    socket.on("move", (data) => {
+      const laneId = lanes[data.lane];
+      const lane = document.getElementById(laneId);
+      const unit = document.createElement("div");
+      unit.className = "unit";
+      unit.style.left = "10%";
+      lane.appendChild(unit);
+
+      let pos = 10;
+      const moveInterval = setInterval(() => {
+        pos += 1;
+        unit.style.left = pos + "%";
+        if (pos >= 90) clearInterval(moveInterval);
+      }, 100);
+    });
+  </script>
 </body>
 </html>
