@@ -26,13 +26,15 @@
       position: absolute;
       bottom: 10px;
       transition: left 0.1s linear;
+      top: 50%;
+      transform: translateY(-50%);
     }
     .tower {
       width: 40px;
       height: 60px;
       background: gold;
       position: absolute;
-      top: 20%;
+      top: 50%;
       transform: translateY(-50%);
     }
     .tower .hp {
@@ -42,10 +44,8 @@
       position: absolute;
       bottom: -10px;
     }
-    .enemy-tower-left { left: 10px; top: 30%; }
-    .enemy-tower-right { left: 10px; top: 70%; }
-    .player-tower-left { right: 10px; top: 30%; }
-    .player-tower-right { right: 10px; top: 70%; }
+    .enemy-tower { left: 10px; }
+    .player-tower { right: 10px; }
   </style>
 </head>
 <body>
@@ -59,56 +59,66 @@
     const socket = io("https://kule-savunma-parasor.onrender.com");
     const lane = document.getElementById("lane");
 
-    // 4 kule ekle
-    const towers = [
-      { class: "tower enemy-tower-left", side: "enemy" },
-      { class: "tower enemy-tower-right", side: "enemy" },
-      { class: "tower player-tower-left", side: "player" },
-      { class: "tower player-tower-right", side: "player" }
-    ];
+    // Kuleleri oluştur
+    const playerTower = document.createElement("div");
+    playerTower.className = "tower player-tower";
+    const playerHp = document.createElement("div");
+    playerHp.className = "hp";
+    playerHp.style.width = "100%";
+    playerTower.appendChild(playerHp);
+    lane.appendChild(playerTower);
 
-    towers.forEach(t => {
-      const tower = document.createElement("div");
-      tower.className = t.class;
+    const enemyTower = document.createElement("div");
+    enemyTower.className = "tower enemy-tower";
+    const enemyHp = document.createElement("div");
+    enemyHp.className = "hp";
+    enemyHp.style.width = "100%";
+    enemyTower.appendChild(enemyHp);
+    lane.appendChild(enemyTower);
 
-      const hpBar = document.createElement("div");
-      hpBar.className = "hp";
-      tower.appendChild(hpBar);
-
-      lane.appendChild(tower);
-    });
-
-    // Lane'e tıklanınca birim oluştur
+    // Tıklayınca birim oluştur
     lane.addEventListener("click", () => {
-      const unit = document.createElement("div");
-      unit.className = "unit";
-      unit.style.left = "90%";
-      lane.appendChild(unit);
-
+      spawnUnit("player");
       socket.emit("move", {});
-
-      let pos = 90;
-      const moveInterval = setInterval(() => {
-        pos -= 1;
-        unit.style.left = pos + "%";
-        if (pos <= 10) clearInterval(moveInterval);
-      }, 100);
     });
 
     socket.on("move", () => {
+      spawnUnit("enemy");
+    });
+
+    function spawnUnit(side) {
       const unit = document.createElement("div");
       unit.className = "unit";
-      unit.style.left = "10%";
+      let pos = side === "player" ? 90 : 10;
+      unit.style.left = pos + "%";
       lane.appendChild(unit);
 
-      let pos = 10;
-      const moveInterval = setInterval(() => {
-        pos += 1;
+      const interval = setInterval(() => {
+        pos += side === "player" ? -1 : 1;
         unit.style.left = pos + "%";
-        if (pos >= 90) clearInterval(moveInterval);
+
+        if (side === "player" && pos <= 10) {
+          damageTower(enemyHp);
+          lane.removeChild(unit);
+          clearInterval(interval);
+        } else if (side === "enemy" && pos >= 90) {
+          damageTower(playerHp);
+          lane.removeChild(unit);
+          clearInterval(interval);
+        }
       }, 100);
-    });
+    }
+
+    function damageTower(hpBar) {
+      let width = parseInt(hpBar.style.width);
+      width -= 20;
+      if (width <= 0) {
+        hpBar.style.width = "0%";
+        alert("Bir kule yıkıldı!");
+      } else {
+        hpBar.style.width = width + "%";
+      }
+    }
   </script>
 </body>
 </html>
-
